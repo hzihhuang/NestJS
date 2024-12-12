@@ -1,11 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Session } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Inject, Res, Headers, UnauthorizedException } from '@nestjs/common';
 import { HomeService } from './home.service';
 import { CreateHomeDto } from './dto/create-home.dto';
 import { UpdateHomeDto } from './dto/update-home.dto';
+import { JwtService } from '@nestjs/jwt';
+import { Response } from 'express';
 
 @Controller('home')
 export class HomeController {
-  constructor(private readonly homeService: HomeService) {}
+  constructor(private readonly homeService: HomeService) { }
+
+  @Inject(JwtService)
+  private jwtService: JwtService;
 
   @Post()
   create(@Body() createHomeDto: CreateHomeDto) {
@@ -13,11 +18,25 @@ export class HomeController {
   }
 
   @Get()
-  findAll(@Session() session) {
-    console.log(session);
-    session.count = session.count ? session.count + 1 : 1;
-    return session.count;
-    // return this.homeService.findAll();
+  findAll(@Headers('authorization') authorization: string, @Res({ passthrough: true }) response: Response) {
+    if (authorization) {
+      try {
+        const token = authorization.split(' ')[1]
+        const decoded = this.jwtService.verify(token)
+
+
+        const newToken = this.jwtService.sign({ count: decoded.count + 1 })
+
+        response.setHeader('token', newToken)
+        return decoded.count + 1;
+      } catch (e) {
+        throw new UnauthorizedException();
+      }
+    } else {
+      const newToken = this.jwtService.sign({ count: 1 })
+      response.setHeader('token', newToken)
+      return 1;
+    }
   }
 
   @Get(':id')

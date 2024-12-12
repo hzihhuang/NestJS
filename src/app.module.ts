@@ -8,4 +8,4 @@ import { HomeModule } from './home/home.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
